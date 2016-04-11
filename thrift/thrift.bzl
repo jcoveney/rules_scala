@@ -6,12 +6,11 @@ def _thrift_library_impl(ctx):
   _valid_thrift_deps(ctx.attr.deps)
   # We move the files and touch them so that the output file is a purely deterministic
   # product of the _content_ of the inputs
-  #TODO is rsync an acceptable dependency here?
   cmd = """
 rm -rf {out}_tmp
 mkdir -p {out}_tmp
 {jar} cMf {out}_tmp/tmp.jar $@
-unzip -o {out}_tmp/tmp.jar -d {out}_tmp >/dev/null
+unzip -o {out}_tmp/tmp.jar -d {out}_tmp 2>/dev/null
 rm -rf {out}_tmp/tmp.jar
 find {out}_tmp -exec touch -t 198001010000 {{}} \;
 {jar} cMf {out} -C {out}_tmp .
@@ -30,8 +29,8 @@ rm -rf {out}_tmp""".format(out=ctx.outputs.libarchive.path,
   transitive_srcs = _collect_thrift_srcs(ctx.attr.deps)
   transitive_srcs += ctx.files.srcs
   return struct(
-    srcs = ctx.files.srcs,
     thrift = struct(
+      srcs = ctx.files.srcs,
       transitive_srcs = transitive_srcs,
       transitive_archives = transitive_archives,
     ),
@@ -54,14 +53,14 @@ def _valid_thrift_deps(targets):
     if not hasattr(target, "thrift"):
       fail("thrift_library can only depend on thrift_library", target)
 
-# Some notes on the raison d'etre of thrift_library vs. scrooge_scala_library.
-# The idea is to be able to separate concerns -- thrift_library is concerned
-# with the ownership of thrift files, and organizing them into targets. It is
-# not concerned with how the process of converting thrifts into sources. Thus,
-# the scrooge_scala_library is what handles the specifics of code generation...
-# this is useful because it means that if there are different code generation
-# targets, we don't need to have a whole separate tree of targets organizing
-# the thrifts.
+# Some notes on the raison d'etre of thrift_library vs. code gen specific
+# targets. The idea is to be able to separate concerns -- thrift_library is
+# concerned purely with the ownership and organization of thrift files. It
+# is not concerned with what to do with them. Thus, the code gen specific
+# targets  will take the graph of thrift_libraries and use them to generate
+# code. This organization is useful because it means that if there are
+# different code generation targets, we don't need to have a whole separate
+# tree of targets organizing the thrifts per code gen paradigm.
 thrift_library = rule(
   implementation = _thrift_library_impl,
   attrs = {

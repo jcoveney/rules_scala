@@ -21,6 +21,7 @@ bazel build test/... \
   && bazel run test:ScalaBinary \
   && bazel run test:ScalaLibBinary \
   && bazel run test:JavaBinary \
+  && bazel run test/src/main/scala/scala/test/twitter_scrooge:justscrooges \
   && bazel test test/... \
   && find -L ./bazel-testlogs -iname "*.xml" \
   && (find -L ./bazel-testlogs -iname "*.xml" | xargs -n1 xmllint > /dev/null) \

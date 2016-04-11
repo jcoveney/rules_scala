@@ -66,7 +66,8 @@ touch -t 198001010000 {manifest}
       progress_message="scala %s" % ctx.label,
       arguments=[])
 
-def _compile(ctx, jars, dep_srcjars, buildijar):
+def _compile(ctx, _jars, dep_srcjars, buildijar):
+  jars = _jars
   res_cmd = _add_resources_cmd(ctx)
   ijar_cmd = ""
   if buildijar:
@@ -75,14 +76,8 @@ def _compile(ctx, jars, dep_srcjars, buildijar):
       out=ctx.outputs.jar.path,
       ijar_out=ctx.outputs.ijar.path)
 
-  sources = []
-  srcjars = []
-  for f in ctx.files.srcs:
-    #TODO this is gross but we aren't given a good "filterNot"
-    if len(_srcjar_filetype.filter([f])) == 0:
-      sources.append(f)
-    else:
-      srcjars.append(f)
+  sources = _scala_filetype.filter(ctx.files.srcs)
+  srcjars = _srcjar_filetype.filter(ctx.files.srcs)
 
   # Set up the args to pass to scalac because they can be too long for bash
   scalac_args_file = ctx.new_file(ctx.outputs.jar, ctx.outputs.jar.short_path + "scalac_args")
@@ -103,11 +98,6 @@ def _compile(ctx, jars, dep_srcjars, buildijar):
       # Note: this is double escaped because we need to do one format call
       # per each srcjar, but then we are going to include this in the bigger format
       # call that is done to generate the full command
-
-      # Note: unzip has -o set (overriding files), and all of the files are unzipped into the same directory.
-      # I feel this is ok because everything should be from the same source tree, so it should have to be consistent
-      # (the whole point of bazel is resolving diamonds). That said, a good TODO might be to ensure that
-      # if there are duplicate files, they are identical (and error otherwise)
 
       #TODO would like to be able to switch >/dev/null, -v, etc based on the user's settings
       srcjar_cmd += """
@@ -147,7 +137,7 @@ rm -rf {out}_tmp
     outs.extend([ctx.outputs.ijar])
   ctx.action(
       inputs=list(jars) +
-          list(dep_srcjars) +
+          list(all_srcjars) +
           ctx.files.srcs +
           ctx.files.resources +
           ctx.files._jdk +
@@ -224,11 +214,12 @@ def _write_test_launcher(ctx, jars):
       output=ctx.outputs.executable,
       content=content)
 
-def _collect_srcjars(targets):
+def collect_srcjars(targets):
   srcjars = set()
   for target in targets:
-    if hasattr(target, "srcjar"):
-      srcjars += [target.srcjar]
+    if hasattr(target, "srcjars"):
+      srcjars += [target.srcjars.srcjar]
+      srcjars += target.srcjars.transitive_srcjars
   return srcjars
 
 def _collect_jars(targets):
@@ -261,7 +252,7 @@ def _collect_jars(targets):
 def _lib(ctx, non_macro_lib):
   # This will be used to pick up srcjars from non-scala library
   # targets (like thrift code generation)
-  srcjars = _collect_srcjars(ctx.attr.deps)
+  srcjars = collect_srcjars(ctx.attr.deps)
   jars = _collect_jars(ctx.attr.deps)
   (cjars, rjars) = (jars.compiletime, jars.runtime)
   write_manifest(ctx)
@@ -285,7 +276,25 @@ def _lib(ctx, non_macro_lib):
       collect_data = True)
   return struct(
       scala = scalaattr,
-      runfiles=runfiles)
+      runfiles=runfiles,
+      # This is a free monoid given to the graph for the purpose of
+      # extensibility. This is necessary when one wants to create
+      # new targets which want to leverage a scala_library. For example,
+      # new_target1 -> scala_library -> new_target2. There might be
+      # information that new_target2 needs to get from new_target1,
+      # but we do not want to ohave to change scala_library to pass
+      # this information through. extra_information allows passing
+      # this information through, and it is up to the new_targets
+      # to filter and make sense of this information.
+      extra_information=_collect_extra_information(ctx.attr.deps),
+    )
+
+def _collect_extra_information(targets):
+  r = []
+  for target in targets:
+    if hasattr(target, 'extra_information'):
+      r.extend(target.extra_information)
+  return r
 
 def _scala_library_impl(ctx):
   return _lib(ctx, True)
