@@ -139,7 +139,7 @@ object ScroogeGenerator {
 
     var dirsToDelete =
       List(
-        scroogeOutput
+        scroogeOutput,
         onlyTransitiveThriftSrcsFile,
         immediateThriftSrcsFile,
         remoteJarsFile
