@@ -98,6 +98,7 @@ def _compile(ctx, jars, dep_srcjars, buildijar):
   all_srcjars = srcjars + list(dep_srcjars)
   srcjar_cmd = ""
   if len(all_srcjars) > 0:
+    srcjar_cmd = "\nmkdir -p {out}_tmp_expand_srcjars\n"
     for srcjar in all_srcjars:
       # Note: this is double escaped because we need to do one format call
       # per each srcjar, but then we are going to include this in the bigger format
@@ -110,14 +111,13 @@ def _compile(ctx, jars, dep_srcjars, buildijar):
 
       #TODO would like to be able to switch >/dev/null, -v, etc based on the user's settings
       srcjar_cmd += """
-rm -rf {{out}}_tmp_expand_srcjars
-mkdir -p {{out}}_tmp_expand_srcjars
 unzip -o {srcjar} -d {{out}}_tmp_expand_srcjars >/dev/null
 echo " " >> {{out}}_args/files_from_jar
 find {{out}}_tmp_expand_srcjars -type f -name "*.scala" >> {{out}}_args/files_from_jar
 """.format(srcjar = srcjar.path)
 
   cmd = """
+rm -rf {out}_tmp_expand_srcjars
 rm -rf {out}_tmp
 set -e
 rm -rf {out}_args
@@ -185,15 +185,25 @@ def write_manifest(ctx):
       content = manifest)
 
 def _write_launcher(ctx, jars):
+  if len(jars) > 0:
+    classpath = ""
+    first = True
+    for jar in jars:
+      if first:
+        classpath = "export CLASSPATH=$0.runfiles/{}\n".format(jar.short_path)
+        first = False
+      else:
+        classpath += "CLASSPATH=$CLASSPATH:$0.runfiles/{}\n".format(jar.short_path)
+
   content = """#!/bin/bash
-cd $0.runfiles
-{java} -cp {cp} {name} "$@"
+{classpath}
+$0.runfiles/{java} {name} "$@"
 """
   content = content.format(
       java=ctx.file._java.path,
       name=ctx.attr.main_class,
       deploy_jar=ctx.outputs.jar.path,
-      cp=":".join([j.short_path for j in jars]))
+      classpath=classpath)
   ctx.file_action(
       output=ctx.outputs.executable,
       content=content)
