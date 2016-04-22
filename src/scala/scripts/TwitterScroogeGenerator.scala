@@ -70,7 +70,7 @@ case class ForeachFile(f: Path => Unit) extends SimpleFileVisitor[Path] {
   }
 }
 
-
+//TODO add logging?
 object ScroogeGenerator {
   def deleteDir(path: String) {
     Files.walkFileTree(Paths.get(path), DeleteRecursively)
@@ -127,12 +127,23 @@ object ScroogeGenerator {
     immediateThriftSrcs.foreach { scrooge.thriftFiles += _ }
     onlyTransitiveThriftSrcs.foreach { scrooge.includePaths += _ }
 
-    Source.fromFile(remoteJarsFile).getLines.toSet.foreach { jar: String =>
-      val _tmp = Files.createTempDirectory(tmp, "jar")
-      extractJarTo(jar, _tmp.toString)
-      Files.walkFileTree(_tmp, ForeachFile { scrooge.includePaths += _.toString })
-    }
     //TODO WE NEED TO TEST THIS!!
+    val tmps =
+      Source.fromFile(remoteJarsFile).getLines.toSet
+        .map { jar: String =>
+          val _tmp = Files.createTempDirectory(tmp, "jar")
+          extractJarTo(jar, _tmp.toString)
+          Files.walkFileTree(_tmp, ForeachFile { scrooge.includePaths += _.toString })
+          _tmp
+        }
+
+    var dirsToDelete =
+      List(
+        scroogeOutput
+        onlyTransitiveThriftSrcsFile,
+        immediateThriftSrcsFile,
+        remoteJarsFile
+      ).map(Paths.get(_)) ++ tmps
 
     scrooge.destFolder = scroogeOutput
     scrooge.fileMapPath = Some(genFileMap)
@@ -142,8 +153,7 @@ object ScroogeGenerator {
 
     // Clean it out to be idempotent
     deleteDir(scroogeOutput)
-    Files.delete(Paths.get(onlyTransitiveThriftSrcsFile))
-    Files.delete(Paths.get(immediateThriftSrcsFile))
+    dirsToDelete.foreach { Files.delete(_) }
   }
 }
 
