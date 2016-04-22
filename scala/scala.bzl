@@ -78,6 +78,7 @@ def _compile(ctx, _jars, dep_srcjars, buildijar):
 
   sources = _scala_filetype.filter(ctx.files.srcs)
   srcjars = _srcjar_filetype.filter(ctx.files.srcs)
+  all_srcjars = set(srcjars + list(dep_srcjars))
 
   # Set up the args to pass to scalac because they can be too long for bash
   scalac_args_file = ctx.new_file(ctx.outputs.jar, ctx.outputs.jar.short_path + "scalac_args")
@@ -90,7 +91,6 @@ def _compile(ctx, _jars, dep_srcjars, buildijar):
       )
   ctx.file_action(output = scalac_args_file, content = scalac_args)
 
-  all_srcjars = srcjars + list(dep_srcjars)
   srcjar_cmd = ""
   if len(all_srcjars) > 0:
     srcjar_cmd = "\nmkdir -p {out}_tmp_expand_srcjars\n"
@@ -102,9 +102,8 @@ def _compile(ctx, _jars, dep_srcjars, buildijar):
       #TODO would like to be able to switch >/dev/null, -v, etc based on the user's settings
       srcjar_cmd += """
 unzip -o {srcjar} -d {{out}}_tmp_expand_srcjars >/dev/null
-echo " " >> {{out}}_args/files_from_jar
-find {{out}}_tmp_expand_srcjars -type f -name "*.scala" >> {{out}}_args/files_from_jar
 """.format(srcjar = srcjar.path)
+    srcjar_cmd += """find {out}_tmp_expand_srcjars -type f -name "*.scala" > {out}_args/files_from_jar\n"""
 
   cmd = """
 rm -rf {out}_tmp_expand_srcjars
@@ -175,18 +174,10 @@ def write_manifest(ctx):
       content = manifest)
 
 def _write_launcher(ctx, jars):
-  if len(jars) > 0:
-    classpath = ""
-    first = True
-    for jar in jars:
-      if first:
-        classpath = "export CLASSPATH=$0.runfiles/{}\n".format(jar.short_path)
-        first = False
-      else:
-        classpath += "CLASSPATH=$CLASSPATH:$0.runfiles/{}\n".format(jar.short_path)
-
+  #TODO just in line this don't need to do the basht hign
+  classpath = ':'.join(["$0.runfiles/" + f.short_path for f in jars])
   content = """#!/bin/bash
-{classpath}
+export CLASSPATH={classpath}
 $0.runfiles/{java} {name} "$@"
 """
   content = content.format(

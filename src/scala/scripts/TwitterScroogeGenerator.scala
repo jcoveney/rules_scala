@@ -38,15 +38,13 @@ case class FinalJarCreator(_baseDir: String, jar: JarOutputStream, shouldMove: S
   val baseDir = Paths.get(_baseDir).normalize
 
   // We return the path of the file to add to the jar
-  def shouldVisitFile(file: Path): Option[String] = {
-    val maybe = file.normalize.relativize(baseDir)
-    if (shouldMove.exists { maybe endsWith _ }) Some(maybe.toString)
+  def shouldVisitFile(file: Path): Option[Path] =
+    if (shouldMove.contains(file)) Some(baseDir.relativize(file))
     else None
-  }
 
   override def visitFile(file: Path, attr: BasicFileAttributes) = {
     shouldVisitFile(file).foreach { _file =>
-      val entry = new JarEntry(_file)
+      val entry = new JarEntry(_file.toString)
       entry.setTime(198001010000L)
       jar.putNextEntry(entry)
       Files.copy(file, jar)
@@ -100,7 +98,6 @@ object ScroogeGenerator {
   }
 
   def main(args: Array[String]) {
-    sys.error(new File(".").getAbsolutePath())
     if (args.length < 3) sys.error("Need to ensure enough arguments! " +
       "Required 3 arguments: transitiveThriftSrcs immediateThriftSrcs " +
       "jarOutput. Received: " + args.mkString(","))
@@ -125,6 +122,9 @@ object ScroogeGenerator {
     val genFileMap = s"$scroogeOutput/gen-file-map.txt"
 
     val scrooge = new Compiler
+    transitiveThriftSrcs.foreach {
+      scrooge.thriftFiles += _
+    }
     scrooge.destFolder = scroogeOutput
     scrooge.fileMapPath = Some(genFileMap)
     scrooge.run()
