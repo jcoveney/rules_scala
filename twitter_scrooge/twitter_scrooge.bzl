@@ -219,10 +219,11 @@ scrooge_scala_srcjar = rule(
     },
 )
 
-def scrooge_scala_library(name, deps=[], visibility=None):
+def scrooge_scala_library(name, deps=[], remote_jars=[] visibility=None):
   scrooge_scala_srcjar(
     name = name + '_srcjar',
     deps = deps,
+    remote_jars = remote_jars,
     visibility = visibility,
   )
   scala_library(
