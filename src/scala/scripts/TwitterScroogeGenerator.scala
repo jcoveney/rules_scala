@@ -10,8 +10,6 @@ import java.nio.file.attribute.{ BasicFileAttributes, FileTime }
 import java.util.jar.{ JarEntry, JarFile, JarOutputStream }
 
 object FinalJarCreator {
-  import scala.collection.JavaConverters._
-
   val gm = """(\S+) -> (\S+)""".r
 
   def apply(dest: String, owned: Set[String], genFileMap: String, scroogeDir: String) {
@@ -27,8 +25,6 @@ object FinalJarCreator {
     val jar = new JarOutputStream(new FileOutputStream(dest))
     Files.walkFileTree(
       Paths.get(scroogeDir),
-      Set().asJava,
-      Integer.MAX_VALUE,
       FinalJarCreator(scroogeDir, jar, shouldMove)
     )
     jar.close()
@@ -67,16 +63,17 @@ object DeleteRecursively extends SimpleFileVisitor[Path] {
   }
 }
 
-object ScroogeGenerator {
-  import scala.collection.JavaConverters._
+case class ForeachFile(f: Path => Unit) extends SimpleFileVisitor[Path] {
+  override def visitFile(file: Path, attr: BasicFileAttributes) = {
+    f(file)
+    FileVisitResult.CONTINUE
+  }
+}
 
+
+object ScroogeGenerator {
   def deleteDir(path: String) {
-    Files.walkFileTree(
-      Paths.get(path),
-      Set().asJava,
-      Integer.MAX_VALUE,
-      DeleteRecursively
-    )
+    Files.walkFileTree(Paths.get(path), DeleteRecursively)
   }
 
   def extractJarTo(_jar: String, _dest: String) {
@@ -98,13 +95,14 @@ object ScroogeGenerator {
   }
 
   def main(args: Array[String]) {
-    if (args.length < 3) sys.error("Need to ensure enough arguments! " +
+    if (args.length < 4) sys.error("Need to ensure enough arguments! " +
       "Required 3 arguments: onlyTransitiveThriftSrcs immediateThriftSrcs " +
-      "jarOutput. Received: " + args.mkString(","))
+      "jarOutput remoteJarsFile. Received: " + args.mkString(","))
 
     val onlyTransitiveThriftSrcsFile = args(0)
     val immediateThriftSrcsFile = args(1)
     val jarOutput = args(2)
+    val remoteJarsFile = args(3)
 
     val tmp = Paths.get(Option(System.getenv("TMPDIR")).getOrElse("/tmp"))
     val scroogeOutput = Files.createTempDirectory(tmp, "scrooge").toString
@@ -123,13 +121,19 @@ object ScroogeGenerator {
       sys.error("onlyTransitiveThriftSrcs and immediateThriftSrcs should " +
         s"have not intersection, found: ${intersect.mkString(",")}")
 
-    //TODO do we want this to be decided in bazel?
-
     val genFileMap = s"$scroogeOutput/gen-file-map.txt"
 
     val scrooge = new Compiler
     immediateThriftSrcs.foreach { scrooge.thriftFiles += _ }
     onlyTransitiveThriftSrcs.foreach { scrooge.includePaths += _ }
+
+    Source.fromFile(remoteJarsFile).getLines.toSet.foreach { jar: String =>
+      val _tmp = Files.createTempDirectory(tmp, "jar")
+      extractJarTo(jar, _tmp.toString)
+      Files.walkFileTree(_tmp, ForeachFile { scrooge.includePaths += _.toString })
+    }
+    //TODO WE NEED TO TEST THIS!!
+
     scrooge.destFolder = scroogeOutput
     scrooge.fileMapPath = Some(genFileMap)
     scrooge.run()

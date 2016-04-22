@@ -1,3 +1,5 @@
+_jar_filetype = FileType([".jar"])
+
 load("//scala:scala.bzl",
   "scala_mvn_artifact",
   "scala_library",
@@ -84,18 +86,9 @@ def _content_newline(data):
   return '\n'.join([f.path for f in data])
 
 def _gen_scrooge_srcjar_impl(ctx):
-  #TODO REMOVE vvv
-  print("PRINTING")
-  for target in ctx.attr.deps:
-    print("target")
-    print(target)
-    print(dir(target))
-    print(target.files)
-    print(target.files_to_run)
-    print(target.java)
-    print(target.label)
-    print(target.output_group)
-  #TODO REMOVE ^^^
+  remote_jars = set()
+  for target in ctx.attr.remote_jars:
+    remote_jars += _jar_filetype.filter(target.files)
 
   # These are the thrift sources whose generated code we will "own" as a target
   immediate_thrift_srcs = _collect_immediate_srcs(ctx.attr.deps)
@@ -132,7 +125,8 @@ def _gen_scrooge_srcjar_impl(ctx):
           ctx.files._scala_parser_combinators + \
           transitive_cjars
 
-  ctx.executable._pluck_scrooge_scala.path
+  remote_jars_file = ctx.new_file(ctx.outputs.srcjar, ctx.outputs.srcjar.short_path + "_remote_jars")
+  ctx.file_action(output=remote_jars_file, content=_content_newline(remote_jars))
 
   only_transitive_thrift_srcs_file = ctx.new_file(ctx.outputs.srcjar, ctx.outputs.srcjar.short_path + "_only_transitive_thrift_srcs")
   ctx.file_action(output = only_transitive_thrift_srcs_file, content = _content_newline(only_transitive_thrift_srcs))
@@ -146,12 +140,15 @@ def _gen_scrooge_srcjar_impl(ctx):
     inputs = list(only_transitive_thrift_srcs) +
         list(transitive_owned_srcs) +
         cjars +
-        [only_transitive_thrift_srcs_file, immediate_thrift_srcs_file],
+        [remote_jars_file,
+         only_transitive_thrift_srcs_file,
+         immediate_thrift_srcs_file],
     outputs = [ctx.outputs.srcjar],
     arguments = [
       only_transitive_thrift_srcs_file.path,
       immediate_thrift_srcs_file.path,
       ctx.outputs.srcjar.path,
+      remote_jars_file.path,
     ],
     progress_message = "creating scrooge files %s" % ctx.label,
   )
@@ -181,8 +178,10 @@ def _gen_scrooge_srcjar_impl(ctx):
 scrooge_scala_srcjar = rule(
     _gen_scrooge_srcjar_impl,
     attrs={
-        "deps": attr.label_list(
-            mandatory=True),
+        "deps": attr.label_list(mandatory=True),
+        #TODO we should think more about how we want to deal
+        #     with these sorts of things...
+        "remote_jars": attr.label_list(),
         "_scrooge_core": attr.label(
             default=Label("@scrooge_core//jar"),
             allow_files=True),
