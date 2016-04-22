@@ -90,6 +90,11 @@ def _gen_scrooge_srcjar_impl(ctx):
     print("target")
     print(target)
     print(dir(target))
+    print(target.files)
+    print(target.files_to_run)
+    print(target.java)
+    print(target.label)
+    print(target.output_group)
   #TODO REMOVE ^^^
 
   # These are the thrift sources whose generated code we will "own" as a target
