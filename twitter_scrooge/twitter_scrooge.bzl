@@ -121,8 +121,8 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   ctx.executable._pluck_scrooge_scala.path
 
-  transitive_thrift_srcs_file = ctx.new_file(ctx.outputs.srcjar, ctx.outputs.srcjar.short_path + "_transitive_thrift_srcs")
-  ctx.file_action(output = transitive_thrift_srcs_file, content = _content_newline(transitive_thrift_srcs))
+  only_transitive_thrift_srcs_file = ctx.new_file(ctx.outputs.srcjar, ctx.outputs.srcjar.short_path + "_only_transitive_thrift_srcs")
+  ctx.file_action(output = only_transitive_thrift_srcs_file, content = _content_newline(only_transitive_thrift_srcs))
 
   immediate_thrift_srcs_file = ctx.new_file(ctx.outputs.srcjar, ctx.outputs.srcjar.short_path + "_immediate_thrift_srcs")
   ctx.file_action(output = immediate_thrift_srcs_file, content = _content_newline(immediate_thrift_srcs))
@@ -130,13 +130,13 @@ def _gen_scrooge_srcjar_impl(ctx):
   ctx.action(
     #TODO do the dependencies of the executable need to be listed?
     executable = ctx.executable._pluck_scrooge_scala,
-    inputs = list(transitive_thrift_srcs) +
+    inputs = list(only_transitive_thrift_srcs) +
         list(transitive_owned_srcs) +
         cjars +
-        [transitive_thrift_srcs_file, immediate_thrift_srcs_file],
+        [only_transitive_thrift_srcs_file, immediate_thrift_srcs_file],
     outputs = [ctx.outputs.srcjar],
     arguments = [
-      transitive_thrift_srcs_file.path,
+      only_transitive_thrift_srcs_file.path,
       immediate_thrift_srcs_file.path,
       ctx.outputs.srcjar.path,
     ],

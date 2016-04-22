@@ -14,7 +14,7 @@ object FinalJarCreator {
 
   val gm = """(\S+) -> (\S+)""".r
 
-  def apply(dest: String, owned: List[String], genFileMap: String, scroogeDir: String) {
+  def apply(dest: String, owned: Set[String], genFileMap: String, scroogeDir: String) {
     val genmap = Source.fromFile(genFileMap)
       .getLines
       .foldLeft(Map.empty[String, Set[String]]) { case (m, gm(thrift, gen)) =>
@@ -99,10 +99,10 @@ object ScroogeGenerator {
 
   def main(args: Array[String]) {
     if (args.length < 3) sys.error("Need to ensure enough arguments! " +
-      "Required 3 arguments: transitiveThriftSrcs immediateThriftSrcs " +
+      "Required 3 arguments: onlyTransitiveThriftSrcs immediateThriftSrcs " +
       "jarOutput. Received: " + args.mkString(","))
 
-    val transitiveThriftSrcsFile = args(0)
+    val onlyTransitiveThriftSrcsFile = args(0)
     val immediateThriftSrcsFile = args(1)
     val jarOutput = args(2)
 
@@ -110,21 +110,26 @@ object ScroogeGenerator {
     val scroogeOutput = Files.createTempDirectory(tmp, "scrooge").toString
 
     // These are all of the files to include when generating scrooge
-    val transitiveThriftSrcs =
-      Source.fromFile(transitiveThriftSrcsFile).getLines.toList
+    // Should not include anything in immediateThriftSrcs
+    val onlyTransitiveThriftSrcs =
+      Source.fromFile(onlyTransitiveThriftSrcsFile).getLines.toSet
 
     // These are the files whose output we want
     val immediateThriftSrcs =
-      Source.fromFile(immediateThriftSrcsFile).getLines.toList
+      Source.fromFile(immediateThriftSrcsFile).getLines.toSet
+
+    val intersect = onlyTransitiveThriftSrcs.intersect(immediateThriftSrcs)
+    if (intersect.nonEmpty)
+      sys.error("onlyTransitiveThriftSrcs and immediateThriftSrcs should " +
+        s"have not intersection, found: ${intersect.mkString(",")}")
 
     //TODO do we want this to be decided in bazel?
 
     val genFileMap = s"$scroogeOutput/gen-file-map.txt"
 
     val scrooge = new Compiler
-    transitiveThriftSrcs.foreach {
-      scrooge.thriftFiles += _
-    }
+    immediateThriftSrcs.foreach { scrooge.thriftFiles += _ }
+    onlyTransitiveThriftSrcs.foreach { scrooge.includePaths += _ }
     scrooge.destFolder = scroogeOutput
     scrooge.fileMapPath = Some(genFileMap)
     scrooge.run()
@@ -133,7 +138,7 @@ object ScroogeGenerator {
 
     // Clean it out to be idempotent
     deleteDir(scroogeOutput)
-    Files.delete(Paths.get(transitiveThriftSrcsFile))
+    Files.delete(Paths.get(onlyTransitiveThriftSrcsFile))
     Files.delete(Paths.get(immediateThriftSrcsFile))
   }
 }
