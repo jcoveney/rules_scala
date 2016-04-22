@@ -73,7 +73,11 @@ case class ForeachFile(f: Path => Unit) extends SimpleFileVisitor[Path] {
 //TODO add logging?
 object ScroogeGenerator {
   def deleteDir(path: String) {
-    Files.walkFileTree(Paths.get(path), DeleteRecursively)
+    try {
+      Files.walkFileTree(Paths.get(path), DeleteRecursively)
+    } catch {
+      case e: Exception => //TODO LOG
+    }
   }
 
   def extractJarTo(_jar: String, _dest: String) {
@@ -152,8 +156,7 @@ object ScroogeGenerator {
     FinalJarCreator(jarOutput, immediateThriftSrcs, genFileMap, scroogeOutput)
 
     // Clean it out to be idempotent
-    deleteDir(scroogeOutput)
-    dirsToDelete.foreach { Files.delete(_) }
+    dirsToDelete.foreach { deleteDir(_) }
   }
 }
 
