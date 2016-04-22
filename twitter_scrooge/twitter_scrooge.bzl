@@ -84,6 +84,12 @@ def _content_newline(data):
   return '\n'.join([f.path for f in data])
 
 def _gen_scrooge_srcjar_impl(ctx):
+  #TODO REMOVE vvv
+  print("PRINTING")
+  for target in ctx.attr.deps:
+    print(target)
+  #TODO REMOVE ^^^
+
   # These are the thrift sources whose generated code we will "own" as a target
   immediate_thrift_srcs = _collect_immediate_srcs(ctx.attr.deps)
 
