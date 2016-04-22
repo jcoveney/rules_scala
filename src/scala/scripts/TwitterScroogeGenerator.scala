@@ -72,9 +72,9 @@ case class ForeachFile(f: Path => Unit) extends SimpleFileVisitor[Path] {
 
 //TODO add logging?
 object ScroogeGenerator {
-  def deleteDir(path: String) {
+  def deleteDir(path: Path) {
     try {
-      Files.walkFileTree(Paths.get(path), DeleteRecursively)
+      Files.walkFileTree(path, DeleteRecursively)
     } catch {
       case e: Exception => //TODO LOG
     }
