@@ -139,7 +139,7 @@ object ScroogeGenerator {
           extractJarTo(jar, _tmp.toString)
           Files.walkFileTree(_tmp, ForeachFile { scrooge.includePaths += _.toString })
           //TODO is the above even necessary given the following?
-          ForeachFile { scrooge.includePaths += _tmp.toString }
+          scrooge.includePaths += _tmp.toString
           _tmp
         }
 
