@@ -87,7 +87,9 @@ def _gen_scrooge_srcjar_impl(ctx):
   #TODO REMOVE vvv
   print("PRINTING")
   for target in ctx.attr.deps:
+    print("target")
     print(target)
+    print(dir(target))
   #TODO REMOVE ^^^
 
   # These are the thrift sources whose generated code we will "own" as a target
