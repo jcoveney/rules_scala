@@ -137,6 +137,8 @@ object ScroogeGenerator {
         .map { jar: String =>
           val _tmp = Files.createTempDirectory(tmp, "jar")
           extractJarTo(jar, _tmp.toString)
+          Files.walkFileTree(_tmp,
+            ForeachFile { scrooge.includePaths += _.toString })
           scrooge.includePaths += _tmp.toString
           _tmp
         }
