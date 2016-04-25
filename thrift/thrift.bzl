@@ -20,8 +20,10 @@ unzip -o {out}_tmp/tmp.jar -d {out}_tmp 2>/dev/null
 rm -rf {out}_tmp/tmp.jar
 find {out}_tmp -exec touch -t 198001010000 {{}} \;
 """ + jarcmd + """
-rm -rf {out}_tmp""".format(out=ctx.outputs.libarchive.path,
-                           jar=ctx.file._jar.path)
+rm -rf {out}_tmp"""
+
+  cmd = cmd.format(out=ctx.outputs.libarchive.path,
+                   jar=ctx.file._jar.path)
   ctx.action(
     inputs = ctx.files.srcs + ctx.files._jar + ctx.files._jdk,
     outputs = [ctx.outputs.libarchive],
