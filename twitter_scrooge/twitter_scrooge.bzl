@@ -174,10 +174,14 @@ def _gen_scrooge_srcjar_impl(ctx):
     progress_message = "creating scrooge files %s" % ctx.label,
   )
 
+  #TODO we should be passing through all of the scala_library ones!!
+
+  jars = _collect_scalaattr(ctx.attr.deps) # should be _collect_scalaattr
+
   scalaattr = struct(outputs = None,
-                     transitive_runtime_deps = [], #TODO are we missing any runtime deps?
-                     transitive_compile_exports = set(transitive_cjars),
-                     transitive_runtime_exports = [],
+                     transitive_runtime_deps = jars.transitive_runtime_deps, #TODO are we missing any runtime deps?
+                     transitive_compile_exports = jars.transitive_compile_exports + set(transitive_cjars),
+                     transitive_runtime_exports = jars.transitive_runtime_exports,
                      )
 
   transitive_srcjars = collect_srcjars(ctx.attr.deps) + collect_extra_srcjars(ctx.attr.deps)
@@ -194,6 +198,24 @@ def _gen_scrooge_srcjar_impl(ctx):
       srcjars=srcjarsattr,
       scrooge_srcjar=struct(transitive_owned_srcs = transitive_owned_srcs + immediate_thrift_srcs),
     )],
+  )
+
+def _collect_scalaattr(targets):
+  transitive_runtime_deps = set()
+  transitive_compile_exports = set()
+  transitive_runtime_exports = set()
+  for target in targets:
+    if hasattr(target, "scala"):
+      transitive_runtime_deps += target.scala.transitive_runtime_deps
+      transitive_compile_exports += target.scala.transitive_compile_exports
+      if hasattr(target.scala.outputs, "ijar"):
+        transitive_compile_exports += [target.scala.outputs.ijar]
+      transitive_runtime_exports += target.scala.transitive_runtime_exports
+
+  return struct(
+    transitive_runtime_deps = transitive_runtime_deps,
+    transitive_compile_exports = transitive_compile_exports,
+    transitive_runtime_exports = transitive_runtime_exports,
   )
 
 scrooge_scala_srcjar = rule(
