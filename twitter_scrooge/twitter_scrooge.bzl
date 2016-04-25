@@ -154,18 +154,6 @@ def _gen_scrooge_srcjar_impl(ctx):
   immediate_thrift_srcs_file = ctx.new_file(ctx.outputs.srcjar, ctx.outputs.srcjar.short_path + "_immediate_thrift_srcs")
   ctx.file_action(output = immediate_thrift_srcs_file, content = _content_newline(immediate_thrift_srcs))
 
-  print("HEY")
-  print("HEY")
-  print("HEY")
-  print("HEY")
-  print(ctx)
-  print("only_transitive_thrift_srcs")
-  print(only_transitive_thrift_srcs)
-  print("transitive_owned_srcs")
-  print(transitive_owned_srcs)
-  print("immediate_thrift_srcs")
-  print(immediate_thrift_srcs)
-
   ctx.action(
     #TODO do the dependencies of the executable need to be listed?
     executable = ctx.executable._pluck_scrooge_scala,
