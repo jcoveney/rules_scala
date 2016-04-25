@@ -70,7 +70,7 @@ def _collect_immediate_srcs(targets):
   r = set()
   for target in targets:
     if hasattr(target, "thrift"):
-      r += target.thrift.srcs
+      r += [target.thrift.srcs]
   return r
 
 def _assert_set_is_subset(left, right):

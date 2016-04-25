@@ -2,6 +2,7 @@ package scripts
 
 import com.twitter.scrooge.Compiler
 
+import scala.collection.mutable.Buffer
 import scala.io.Source
 
 import java.io.{ File, FileOutputStream, IOException }
@@ -80,22 +81,29 @@ object ScroogeGenerator {
     }
   }
 
-  def extractJarTo(_jar: String, _dest: String) {
+  def extractJarTo(_jar: String, _dest: String): List[Path] = {
+    val files = Buffer[Path]()
+    //TODO add to it, error if duplicate!
     val jar = new JarFile(_jar)
     val enumEntries = jar.entries()
-    while (enumEntries.hasMoreElements()) {
+    while (enumEntries.hasMoreElements) {
       val file = enumEntries.nextElement().asInstanceOf[JarEntry]
-      val f = new File(_dest, file.getName())
+      val f = new File(_dest, file.getName) //TODO pathify this
       if (file.isDirectory()) f.mkdir()
       else {
+        val path = Paths.get(f.toURI)
+
         val is = jar.getInputStream(file)
-        val fos = new FileOutputStream(f)
-        //TODO we can proably make this faster...
-        while (is.available() > 0) fos.write(is.read())
-        fos.close()
-        is.close()
+        try {
+          Files.copy(is, path) // Will error out if path already exists
+        } finally {
+          is.close()
+        }
+
+        files += path
       }
     }
+    files.toList
   }
 
   def main(args: Array[String]) {
@@ -113,45 +121,56 @@ object ScroogeGenerator {
 
     // These are all of the files to include when generating scrooge
     // Should not include anything in immediateThriftSrcs
-    val onlyTransitiveThriftSrcs =
+    val onlyTransitiveThriftSrcJars =
       Source.fromFile(onlyTransitiveThriftSrcsFile).getLines.toSet
 
     // These are the files whose output we want
-    val immediateThriftSrcs =
+    val immediateThriftSrcJars =
       Source.fromFile(immediateThriftSrcsFile).getLines.toSet
-
-    val intersect = onlyTransitiveThriftSrcs.intersect(immediateThriftSrcs)
-    if (intersect.nonEmpty)
-      sys.error("onlyTransitiveThriftSrcs and immediateThriftSrcs should " +
-        s"have not intersection, found: ${intersect.mkString(",")}")
 
     val genFileMap = s"$scroogeOutput/gen-file-map.txt"
 
     val scrooge = new Compiler
+
+    // we need to extract into the same tree, as that is the only way to get relative imports between them working..
+    // AS SUCH, we are just going to try extracting EVERYTHING to the same tree, and we will just error if there
+    // are more than one.
+    val _tmp =  Files.createTempDirectory(tmp, "jar")
+    // This will only be meaningful if they have absolute_prefix set
+    scrooge.includePaths += _tmp.toString
+
+    //TODO we should probably just make everything Paths instead of strings
+    def extract(jars: Set[String]): Set[String] =
+      jars.flatMap { jar =>
+        val files = extractJarTo(jar, _tmp.toString)
+        files.foreach { scrooge.includePaths += _.toString }
+        files.map(_.toString)
+      }
+
+    val immediateThriftSrcs = extract(immediateThriftSrcJars)
+
     immediateThriftSrcs.foreach { scrooge.thriftFiles += _ }
-    onlyTransitiveThriftSrcs.foreach { scrooge.includePaths += _ }
+
+    val onlyTransitiveThriftSrcs = extract(onlyTransitiveThriftSrcJars)
+
+    val intersect = onlyTransitiveThriftSrcs.intersect(immediateThriftSrcs)
+
+    if (intersect.nonEmpty)
+      sys.error("onlyTransitiveThriftSrcs and immediateThriftSrcs should " +
+        s"have not intersection, found: ${intersect.mkString(",")}")
 
     //TODO WE NEED TO TEST THIS!!
-    val tmps =
-      Source.fromFile(remoteJarsFile).getLines.toSet
-        .map { jar: String =>
-          val _tmp = Files.createTempDirectory(tmp, "jar")
-          extractJarTo(jar, _tmp.toString)
-          //TODO it is unclear if this makes a difference or not...
-          //     thus far evidence is that it does not
-          Files.walkFileTree(_tmp,
-            ForeachFile { scrooge.includePaths += _.toString })
-          scrooge.includePaths += _tmp.toString
-          _tmp
-        }
+    val remoteSrcJars = Source.fromFile(remoteJarsFile).getLines.toSet
+    extract(remoteSrcJars)
 
-    var dirsToDelete =
-      List(
-        scroogeOutput,
-        onlyTransitiveThriftSrcsFile,
+    val dirsToDelete =
+      Set(
         immediateThriftSrcsFile,
-        remoteJarsFile
-      ).map(Paths.get(_)) ++ tmps
+        onlyTransitiveThriftSrcsFile,
+        scroogeOutput,
+        remoteJarsFile,
+        _tmp.toString
+      ).map(Paths.get(_))
 
     scrooge.destFolder = scroogeOutput
     scrooge.fileMapPath = Some(genFileMap)
