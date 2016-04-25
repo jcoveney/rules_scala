@@ -31,7 +31,7 @@ rm -rf {out}_tmp""".format(out=ctx.outputs.libarchive.path,
   )
 
   transitive_srcs = _collect_thrift_srcs(ctx.attr.deps)
-  transitive_srcs += ctx.outputs.libarchive
+  transitive_srcs += [ctx.outputs.libarchive]
   return struct(
     thrift = struct(
       srcs = ctx.outputs.libarchive,
