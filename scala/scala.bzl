@@ -209,8 +209,8 @@ def collect_srcjars(targets):
   srcjars = set()
   for target in targets:
     if hasattr(target, "srcjars"):
-      #TODO we expect that any transitive srcjars will be put on the compiler classpath
       srcjars += [target.srcjars.srcjar]
+      srcjars += target.srcjars.transitive_srcjars #TODO should this be here?
   return srcjars
 
 def _collect_jars(targets):

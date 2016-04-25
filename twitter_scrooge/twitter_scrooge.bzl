@@ -184,7 +184,7 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   srcjarsattr = struct(
     srcjar = ctx.outputs.srcjar,
-    transitive_srcjars = transitive_srcjars
+    transitive_srcjars = transitive_srcjars,
   )
 
   return struct(
