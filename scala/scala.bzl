@@ -210,7 +210,6 @@ def collect_srcjars(targets):
   for target in targets:
     if hasattr(target, "srcjars"):
       srcjars += [target.srcjars.srcjar]
-      srcjars += target.srcjars.transitive_srcjars #TODO should this be here?
   return srcjars
 
 def _collect_jars(targets):
@@ -241,10 +240,18 @@ def _collect_jars(targets):
   return struct(compiletime = compile_jars, runtime = runtime_jars)
 
 def _lib(ctx, non_macro_lib):
+  print("LIB")
+  print("LIB")
+  print("LIB")
+  print(ctx)
   # This will be used to pick up srcjars from non-scala library
   # targets (like thrift code generation)
   srcjars = collect_srcjars(ctx.attr.deps)
+  print("srcjars")
+  print(srcjars)
   jars = _collect_jars(ctx.attr.deps)
+  print("jars")
+  print(jars)
   (cjars, rjars) = (jars.compiletime, jars.runtime)
   write_manifest(ctx)
   outputs = _compile_or_empty(ctx, cjars, srcjars, non_macro_lib)
