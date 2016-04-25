@@ -240,7 +240,7 @@ scrooge_scala_srcjar = rule(
     },
 )
 
-def scrooge_scala_library(name, deps=[], remote_jars=[], visibility=None):
+def scrooge_scala_library(name, deps=[], remote_jars=[], jvm_flags=[], visibility=None):
   scrooge_scala_srcjar(
     name = name + '_srcjar',
     deps = deps,
@@ -258,5 +258,6 @@ def scrooge_scala_library(name, deps=[], remote_jars=[], visibility=None):
       "@libthrift//jar",
       "@scrooge_core//jar",
     ],
+    jvm_flags = jvm_flags,
     visibility = visibility,
   )

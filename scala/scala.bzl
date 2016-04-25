@@ -84,7 +84,7 @@ def _compile(ctx, _jars, dep_srcjars, buildijar):
   scalac_args_file = ctx.new_file(ctx.outputs.jar, ctx.outputs.jar.short_path + "scalac_args")
   scalac_args = """{scala_opts} {jvm_flags} -classpath "{jars}" -d {out}_tmp {files}""".format(
       scala_opts=" ".join(ctx.attr.scalacopts),
-      jvm_flags=" ".join(["-J" + flag for flag in (ctx.attr.jvm_flags + ["-Xmx2g"])]),
+      jvm_flags=" ".join(["-J" + flag for flag in ctx.attr.jvm_flags]),
       jars=":".join([j.path for j in jars]),
       files=" ".join([f.path for f in sources]),
       out=ctx.outputs.jar.path
