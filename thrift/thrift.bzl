@@ -19,7 +19,7 @@ mkdir -p {out}_tmp
 unzip -o {out}_tmp/tmp.jar -d {out}_tmp 2>/dev/null
 rm -rf {out}_tmp/tmp.jar
 find {out}_tmp -exec touch -t 198001010000 {{}} \;
-{jar} cMf {out} -C {out}_tmp .
+""" + jarcmd + """
 rm -rf {out}_tmp""".format(out=ctx.outputs.libarchive.path,
                            jar=ctx.file._jar.path)
   ctx.action(
