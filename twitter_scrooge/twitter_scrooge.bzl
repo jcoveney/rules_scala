@@ -143,6 +143,8 @@ def _gen_scrooge_srcjar_impl(ctx):
   print(only_transitive_thrift_srcs)
   print("transitive_owned_srcs")
   print(transitive_owned_srcs)
+  print("immediate_thrift_srcs")
+  print(immediate_thrift_srcs)
 
   ctx.action(
     #TODO do the dependencies of the executable need to be listed?
