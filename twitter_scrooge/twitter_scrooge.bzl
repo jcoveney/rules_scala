@@ -128,7 +128,7 @@ def _gen_scrooge_srcjar_impl(ctx):
   transitive_owned_srcs = _collect_owned_srcs(ctx.attr.deps)
 
   print("transitive_owned_srcs")
-  print(transitive_owned_srcss)
+  print(transitive_owned_srcs)
 
   # We want to ensure that the thrift sources which we do not own (but need
   # in order to generate code) have targets which will compile them.
