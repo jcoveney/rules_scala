@@ -137,6 +137,8 @@ object ScroogeGenerator {
         .map { jar: String =>
           val _tmp = Files.createTempDirectory(tmp, "jar")
           extractJarTo(jar, _tmp.toString)
+          //TODO it is unclear if this makes a difference or not...
+          //     thus far evidence is that it does not
           Files.walkFileTree(_tmp,
             ForeachFile { scrooge.includePaths += _.toString })
           scrooge.includePaths += _tmp.toString
