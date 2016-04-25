@@ -100,15 +100,22 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   # These are the thrift sources whose generated code we will "own" as a target
   immediate_thrift_srcs = _collect_immediate_srcs(ctx.attr.deps)
+  #TODO I think we need to be including extra_information??
 
   print("immediate_thrift_srcs")
   print(immediate_thrift_srcs)
+
+  # This is the set of sources which is covered by any scala_library
+  # or scala_scrooge_gen targets that are depended on by this. This is
+  # necessary as we only compile the sources we own, and rely on other
+  # targets compiling the rest (for the benefit of caching and correctness).
+  transitive_owned_srcs = _collect_owned_srcs(ctx.attr.deps)
 
   # These are the thrift sources in the dependency graph. They are necessary
   # to generate the code, but are not "owned" by this target and will not
   # be in the resultant source jar
 
-  transitive_thrift_srcs = _collect_transitive_srcs(ctx.attr.deps)
+  transitive_thrift_srcs = transitive_owned_srcs + _collect_transitive_srcs(ctx.attr.deps)
 
   print("transitive_thrift_srcs")
   print(transitive_thrift_srcs)
@@ -120,12 +127,6 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   print("only_transitive_thrift_srcs")
   print(only_transitive_thrift_srcs)
-
-  # This is the set of sources which is covered by any scala_library
-  # or scala_scrooge_gen targets that are depended on by this. This is
-  # necessary as we only compile the sources we own, and rely on other
-  # targets compiling the rest (for the benefit of caching and correctness).
-  transitive_owned_srcs = _collect_owned_srcs(ctx.attr.deps)
 
   print("transitive_owned_srcs")
   print(transitive_owned_srcs)
@@ -158,7 +159,6 @@ def _gen_scrooge_srcjar_impl(ctx):
     #TODO do the dependencies of the executable need to be listed?
     executable = ctx.executable._pluck_scrooge_scala,
     inputs = list(only_transitive_thrift_srcs) +
-        list(transitive_owned_srcs) +
         list(immediate_thrift_srcs) +
         cjars +
         [remote_jars_file,
