@@ -6,7 +6,7 @@ def _thrift_library_impl(ctx):
   #TODO MAKE THIS BE A SCALA IMPLEMENTATION, AND USE THE ABSOLUTE PREFIX!
   prefix = ctx.attr.absolute_prefix
   jarcmd = "{jar} cMf {out} -C {out}_tmp ."
-  if prefix == '':
+  if prefix != '':
     jarcmd = "{{jar}} cMf {{out}} -C {{out}}_tmp/{prefix} .".format(prefix=prefix)
 
   _valid_thrift_deps(ctx.attr.deps)
