@@ -154,8 +154,6 @@ def _gen_scrooge_srcjar_impl(ctx):
     progress_message = "creating scrooge files %s" % ctx.label,
   )
 
-  #TODO we should be passing through all of the scala_library ones!!
-
   jars = _collect_scalaattr(ctx.attr.deps) # should be _collect_scalaattr
 
   scalaattr = struct(outputs = None,
@@ -257,7 +255,7 @@ def scrooge_scala_library(name, deps=[], remote_jars=[], jvm_flags=[], visibilit
   )
   scala_library(
     name = name,
-    deps = deps + [
+    deps = remote_jars + [
       name + '_srcjar',
       "@libthrift//jar",
       "@scrooge_core//jar",
