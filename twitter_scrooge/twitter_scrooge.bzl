@@ -160,7 +160,7 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   scalaattr = struct(outputs = None,
                      transitive_runtime_deps = jars.transitive_runtime_deps, #TODO are we missing any runtime deps?
-                     transitive_compile_exports = jars.transitive_compile_exports + set(transitive_cjars) + remote_jars, #will remote jars always have both?
+                     transitive_compile_exports = jars.transitive_compile_exports + set(transitive_cjars),
                      transitive_runtime_exports = jars.transitive_runtime_exports,
                      )
 
@@ -203,7 +203,12 @@ scrooge_scala_srcjar = rule(
     attrs={
         "deps": attr.label_list(mandatory=True),
         #TODO we should think more about how we want to deal
-        #     with these sorts of things...
+        #     with these sorts of things... right now, this
+        #     assumes that the user has a jar with both
+        #     the class files and the thrift files in the same
+        #     hierarchy. The reason this is necessary is
+        #     for depending on external thrift jars that
+        #     aren't bazel projects.
         "remote_jars": attr.label_list(),
         "_scrooge_core": attr.label(
             default=Label("@scrooge_core//jar"),
