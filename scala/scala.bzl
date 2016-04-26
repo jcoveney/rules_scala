@@ -82,7 +82,9 @@ def _compile(ctx, _jars, dep_srcjars, buildijar):
 
   # Set up the args to pass to scalac because they can be too long for bash
   scalac_args_file = ctx.new_file(ctx.outputs.jar, ctx.outputs.jar.short_path + "scalac_args")
-  scalac_args = """{scala_opts} {jvm_flags} -classpath "{jars}" -d {out}_tmp {files}""".format(
+  #TODO THIS IS A HACK TO SEE IF IT WORKS WITH ZINC...MUST REMOVE!!
+  scalac_args = """zinc -scala-home /usr/local/Cellar/scala/2.11.7/libexec/lib/ {scala_opts} {jvm_flags} -classpath "{jars}" -d {out}_tmp {files}""".format(
+  #scalac_args = """{scala_opts} {jvm_flags} -classpath "{jars}" -d {out}_tmp {files}""".format(
       scala_opts=" ".join(ctx.attr.scalacopts),
       jvm_flags=" ".join(["-J" + flag for flag in ctx.attr.jvm_flags]),
       jars=":".join([j.path for j in jars]),
@@ -113,8 +115,14 @@ rm -rf {out}_args
 mkdir -p {out}_args
 touch {out}_args/files_from_jar
 mkdir -p {out}_tmp""" + srcjar_cmd + """
-cat {scalac_args} {out}_args/files_from_jar > {out}_args/args
-env JAVACMD={java} {scalac} @{out}_args/args
+#TODO THIS IS A HACK TO SEE IF IT WORKS WITH ZINC...MUST REMOVE!!
+cat {scalac_args} {out}_args/files_from_jar > {out}_args/args_tmp
+tr '\n' ' ' < {out}_args/args_tmp > {out}_args/args
+#TODO VVV REMOVE
+bash {out}_args/args
+#TODO ^^^ REMOVE
+#TODO vv reinstate/fix
+#env JAVACMD={java} {scalac} @{out}_args/args
 # Make jar file deterministic by setting the timestamp of files
 find {out}_tmp -exec touch -t 198001010000 {{}} \;
 touch -t 198001010000 {manifest}
@@ -240,18 +248,10 @@ def _collect_jars(targets):
   return struct(compiletime = compile_jars, runtime = runtime_jars)
 
 def _lib(ctx, non_macro_lib):
-  print("LIB")
-  print("LIB")
-  print("LIB")
-  print(ctx)
   # This will be used to pick up srcjars from non-scala library
   # targets (like thrift code generation)
   srcjars = collect_srcjars(ctx.attr.deps)
-  print("srcjars")
-  print(srcjars)
   jars = _collect_jars(ctx.attr.deps)
-  print("jars")
-  print(jars)
   (cjars, rjars) = (jars.compiletime, jars.runtime)
   write_manifest(ctx)
   outputs = _compile_or_empty(ctx, cjars, srcjars, non_macro_lib)
