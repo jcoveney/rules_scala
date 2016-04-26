@@ -137,7 +137,8 @@ def _gen_scrooge_srcjar_impl(ctx):
   ctx.action(
     #TODO do the dependencies of the executable need to be listed?
     executable = ctx.executable._pluck_scrooge_scala,
-    inputs = list(only_transitive_thrift_srcs) +
+    inputs = list(remote_jars) +
+        list(only_transitive_thrift_srcs) +
         list(immediate_thrift_srcs) +
         cjars +
         [remote_jars_file,
