@@ -203,12 +203,13 @@ scrooge_scala_srcjar = rule(
     attrs={
         "deps": attr.label_list(mandatory=True),
         #TODO we should think more about how we want to deal
-        #     with these sorts of things... right now, this
-        #     assumes that the user has a jar with both
-        #     the class files and the thrift files in the same
-        #     hierarchy. The reason this is necessary is
-        #     for depending on external thrift jars that
-        #     aren't bazel projects.
+        #     with these sorts of things... this basically
+        #     is saying that we have a jar with a bunch
+        #     of thrifts that we want to depend on. Seems like
+        #     that should be a concern of thrift_library? we have
+        #     it here through becuase we need to show that it is
+        #     "covered," as well as needing the thrifts to
+        #     do the code gen.
         "remote_jars": attr.label_list(),
         "_scrooge_core": attr.label(
             default=Label("@scrooge_core//jar"),
@@ -256,7 +257,7 @@ def scrooge_scala_library(name, deps=[], remote_jars=[], jvm_flags=[], visibilit
   )
   scala_library(
     name = name,
-    deps = [
+    deps = deps + [
       name + '_srcjar',
       "@libthrift//jar",
       "@scrooge_core//jar",
