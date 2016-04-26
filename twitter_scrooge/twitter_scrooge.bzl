@@ -86,24 +86,12 @@ def _content_newline(data):
   return '\n'.join([f.path for f in data])
 
 def _gen_scrooge_srcjar_impl(ctx):
-  print("HEY")
-  print("HEY")
-  print("HEY")
-  print(ctx)
-
   remote_jars = set()
   for target in ctx.attr.remote_jars:
     remote_jars += _jar_filetype.filter(target.files)
 
-  print("remote_jars")
-  print(remote_jars)
-
   # These are the thrift sources whose generated code we will "own" as a target
   immediate_thrift_srcs = _collect_immediate_srcs(ctx.attr.deps)
-  #TODO I think we need to be including extra_information??
-
-  print("immediate_thrift_srcs")
-  print(immediate_thrift_srcs)
 
   # This is the set of sources which is covered by any scala_library
   # or scala_scrooge_gen targets that are depended on by this. This is
@@ -117,19 +105,10 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   transitive_thrift_srcs = transitive_owned_srcs + _collect_transitive_srcs(ctx.attr.deps)
 
-  print("transitive_thrift_srcs")
-  print(transitive_thrift_srcs)
-
   only_transitive_thrift_srcs = set()
   for src in transitive_thrift_srcs:
     if src not in immediate_thrift_srcs:
       only_transitive_thrift_srcs += [src]
-
-  print("only_transitive_thrift_srcs")
-  print(only_transitive_thrift_srcs)
-
-  print("transitive_owned_srcs")
-  print(transitive_owned_srcs)
 
   # We want to ensure that the thrift sources which we do not own (but need
   # in order to generate code) have targets which will compile them.
