@@ -106,6 +106,7 @@ object ScroogeGenerator {
     files.toList
   }
 
+  //TODO add logging that can be turned on/off?
   def main(args: Array[String]) {
     if (args.length < 4) sys.error("Need to ensure enough arguments! " +
       "Required 3 arguments: onlyTransitiveThriftSrcs immediateThriftSrcs " +

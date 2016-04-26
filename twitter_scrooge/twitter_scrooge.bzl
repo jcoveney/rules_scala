@@ -160,7 +160,7 @@ def _gen_scrooge_srcjar_impl(ctx):
 
   scalaattr = struct(outputs = None,
                      transitive_runtime_deps = jars.transitive_runtime_deps, #TODO are we missing any runtime deps?
-                     transitive_compile_exports = jars.transitive_compile_exports + set(transitive_cjars),
+                     transitive_compile_exports = jars.transitive_compile_exports + set(transitive_cjars) + remote_jars, #will remote jars always have both?
                      transitive_runtime_exports = jars.transitive_runtime_exports,
                      )
 
